@@ -43,6 +43,12 @@ If any required tool is missing, run `scripts/check_toolchain.sh`, report the mi
    - panel/text entrance
    - final hold for readability
 11. If there is no useful number for a slide, do not create a metric, gauge, or animated bar. Use text entrance motion only.
+12. For AI, developer-tool, automation, or technical explainer videos that need a creator/tutorial look, use `references/dark-neon-explainer-style.md` as the design system:
+   - dark stage
+   - oversized hook typography
+   - neon green/orange accent
+   - one symbolic hub, topology, or timeline visual per scene
+   - Remotion-native text, glow, radial, and icon motion inside each scene
 
 For exact commands and branch choices, read `references/pipeline.md`.
 
@@ -95,6 +101,7 @@ Timing JSON shape:
 - For visual proof images, save GIF by default. PNG frame sequences are allowed only as internal video-encoding intermediates.
 - Load only the relevant reference file for the selected renderer:
   - Remotion: read Remotion best-practices and `references/pipeline.md`.
+  - Creator-style AI/dev explainers: also read `references/dark-neon-explainer-style.md`.
 - Summarize verification outputs instead of pasting full ffprobe or transcript JSON.
 
 ## Verification Checklist

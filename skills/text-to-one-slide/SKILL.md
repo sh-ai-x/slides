@@ -31,6 +31,7 @@ Default output is a 16:9 GIF plus a compact JSON plan. If the user asks for edit
 - Keep visible body text under 70 Korean characters or 45 English words when possible.
 - Put long source detail into `notes`, not on the slide.
 - Use one accent color, default red `#c0392b`.
+- For AI, developer-tool, agent, skill, automation, or creator-style tutorial topics, use the dark neon explainer direction from `../text-to-ppt-video/references/dark-neon-explainer-style.md`: black stage, oversized white hook, neon green/orange accent, and one symbolic system visual.
 - Prefer dense but readable consulting-style composition over decorative cards.
 - If metrics are central to the message, show the most important metric prominently. Do not add a large number just because the source mentions a list count.
 - Use compact JSON and local rendering scripts; do not duplicate long source text in chat or visible slide text.

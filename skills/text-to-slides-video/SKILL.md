@@ -34,6 +34,7 @@ Read these references as needed:
 
 - `../text-to-slides/references/responsive-html.md`
 - `../text-to-slides/references/chart-motion.md`
+- `../text-to-ppt-video/references/dark-neon-explainer-style.md`
 - `references/video-pipeline.md`
 
 ## Default Motion
@@ -50,6 +51,8 @@ Use the same visual grammar for all routes:
 Do not invent gauges, bars, or count-up metrics for conceptual slides. If `metric` is empty and `chart/showChart` is not explicitly true, use text entrance motion only.
 
 Motion belongs inside the scene timeline: use Remotion `<Sequence>`, `interpolate()`, `spring()`, opacity, transform, and `scaleX`. Do not solve motion by generating multiple slides for the same source page.
+
+For AI, coding, agent, skill, automation, or technical tutorial scripts, prefer the dark neon explainer style unless the user asks for a formal deck. Use a near-black stage, oversized hook text, neon green/orange accent, and one central hub, topology, checklist, or timeline visual instead of card-heavy layouts.
 
 ## Token Optimization Rules
 

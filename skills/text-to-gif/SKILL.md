@@ -17,6 +17,7 @@ Create a short animated GIF from text. Use metric-led motion only when the sourc
    - `square`: 1080x1080 for social feeds.
    - `card`: 1080x1350 for card-news style.
 3. Build compact scene JSON with title, body, optional metric/bar only when numerically useful, and duration.
+   - Use `style: "dark_neon"` for AI, coding, agent, skill, automation, or creator-style tutorial GIFs.
 4. Render with `scripts/text_to_metric_gif.py` using Python/Pillow.
 5. Verify the GIF exists, is non-empty, opens as an animated image, and has multiple frames.
 
@@ -33,6 +34,8 @@ Read `references/gif-motion.md` whenever numbers or charts exist. Default effect
 Keep final text values visible in later frames; the GIF must still make sense if viewed as a thumbnail.
 
 Do not add count-up text, gauges, or bar motion to conceptual scenes with no useful number. If a scene has no numeric metric, render title/body entrance motion only.
+
+For creator-style AI/dev explainers, use the dark neon style from `../text-to-ppt-video/references/dark-neon-explainer-style.md`: black stage, oversized hook text, neon green/orange accent, and one hub/timeline/checklist visual.
 
 ## Token Optimization Rules
 

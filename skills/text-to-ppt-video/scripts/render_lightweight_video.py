@@ -67,6 +67,39 @@ def should_render_chart(scene: dict[str, Any]) -> bool:
     return has_numeric_metric(scene)
 
 
+def is_dark_neon(scene: dict[str, Any]) -> bool:
+    style = str(scene.get("style") or scene.get("theme") or "").lower().replace("-", "_")
+    return style in {"dark_neon", "neon_dark", "creator_dark", "youtube_neon"}
+
+
+def draw_neon_hub(draw: ImageDraw.ImageDraw, w: int, h: int, progress: float) -> None:
+    cx = int(w * 0.73)
+    cy = int(h * 0.44)
+    growth = ease_out_cubic(min(progress / 0.72, 1))
+    radius = int(min(w, h) * 0.17 * growth)
+    for i in range(20):
+        angle = math.tau * i / 20 + 0.2
+        inner = int(radius * 0.18)
+        outer = radius + int((i % 4) * radius * 0.22)
+        x1 = cx + int(math.cos(angle) * inner)
+        y1 = cy + int(math.sin(angle) * inner)
+        x2 = cx + int(math.cos(angle) * outer)
+        y2 = cy + int(math.sin(angle) * outer)
+        fill = "#27F59B" if i % 2 else "#FF744F"
+        draw.line((x1, y1, x2, y2), fill=fill, width=max(2, int(w * 0.003)))
+    r = max(16, int(radius * 0.24))
+    draw.ellipse((cx - r, cy - r, cx + r, cy + r), fill="#FF744F", outline="#27F59B", width=max(2, int(w * 0.003)))
+    icon_font = font(max(12, int(w * 0.014)))
+    for ox, oy, label in [(-0.16, -0.15, "AI"), (0.17, -0.08, "{}"), (-0.10, 0.21, "API")]:
+        alpha = ease_out_cubic(max(0, min((progress - 0.28) / 0.5, 1)))
+        bx = cx + int(w * ox * alpha)
+        by = cy + int(h * oy * alpha)
+        bw = int(w * 0.07)
+        bh = int(h * 0.06)
+        draw.rounded_rectangle((bx, by, bx + bw, by + bh), radius=10, fill="#111719", outline="#24E89A", width=1)
+        draw.text((bx + int(bw * 0.22), by + int(bh * 0.22)), label, font=icon_font, fill="#E9FFF6")
+
+
 def wrap(draw: ImageDraw.ImageDraw, text: str, face: ImageFont.ImageFont, max_width: int, max_lines: int) -> list[str]:
     korean = bool(re.search(r"[\u3131-\ud7a3]", text))
     units = list(text) if korean else text.split()
@@ -138,13 +171,14 @@ def scene_duration(scene: dict[str, Any], speed: str, min_scene_ms: int, max_sce
 
 def render_frame(scene: dict[str, Any], progress: float, size: tuple[int, int]) -> Image.Image:
     w, h = size
-    image = Image.new("RGB", size, "#F7F8FA")
+    dark = is_dark_neon(scene)
+    image = Image.new("RGB", size, "#030504" if dark else "#F7F8FA")
     draw = ImageDraw.Draw(image)
 
-    ink = "#111827"
-    muted = "#5F6673"
-    accent = "#C0392B"
-    track = "#E5E8EE"
+    ink = "#F8FAFC" if dark else "#111827"
+    muted = "#A8B3BD" if dark else "#5F6673"
+    accent = "#27F59B" if dark else "#C0392B"
+    track = "#253036" if dark else "#E5E8EE"
     px = int(w * 0.075)
     py = int(h * 0.105)
 
@@ -154,6 +188,9 @@ def render_frame(scene: dict[str, Any], progress: float, size: tuple[int, int]) 
     body_font = font(max(19, int(w * 0.026)))
     footer_font = font(max(12, int(w * 0.014)))
 
+    if dark:
+        draw_neon_hub(draw, w, h, progress)
+
     wipe = ease_out_cubic(min(progress / 0.28, 1))
     draw.rectangle((px, int(py * 0.68), px + int(w * 0.07 * wipe), int(py * 0.68) + max(4, int(h * 0.008))), fill=accent)
 
@@ -161,7 +198,7 @@ def render_frame(scene: dict[str, Any], progress: float, size: tuple[int, int]) 
     offset = int((1 - entrance) * 30)
     draw.text((px, py + offset), str(scene.get("eyebrow", "")).upper(), font=eyebrow_font, fill=accent)
 
-    title_lines = wrap(draw, str(scene.get("title", "")), title_font, int(w * 0.8), 2)
+    title_lines = wrap(draw, str(scene.get("title", "")), title_font, int(w * (0.56 if dark else 0.8)), 2)
     y = draw_lines(draw, (px, int(py * 1.38) + offset), title_lines, title_font, ink, int(h * 0.018))
 
     metric_text = str(scene.get("metric", "")).strip()
@@ -174,7 +211,7 @@ def render_frame(scene: dict[str, Any], progress: float, size: tuple[int, int]) 
     else:
         body_y = metric_y + int(h * 0.02)
 
-    body_lines = wrap(draw, str(scene.get("body", "")), body_font, int(w * 0.72), 2)
+    body_lines = wrap(draw, str(scene.get("body", "")), body_font, int(w * (0.55 if dark else 0.72)), 2)
     draw_lines(draw, (px, body_y), body_lines, body_font, muted, int(h * 0.014))
 
     value = float(scene.get("bar", 0) or 0)
@@ -188,7 +225,8 @@ def render_frame(scene: dict[str, Any], progress: float, size: tuple[int, int]) 
         draw.rectangle((bx, by, bx + bw, by + bh), fill=track)
         draw.rectangle((bx, by, bx + fill_w, by + bh), fill=accent)
 
-    draw.text((px, h - int(h * 0.07)), "text-to-ppt-video / lightweight motion file", font=footer_font, fill=muted)
+    footer = "dark-neon explainer / lightweight motion file" if dark else "text-to-ppt-video / lightweight motion file"
+    draw.text((px, h - int(h * 0.07)), footer, font=footer_font, fill=muted)
     page = scene.get("page")
     if page is not None:
         draw.text((w - int(w * 0.14), h - int(h * 0.07)), f"Slide {page}", font=footer_font, fill=muted)
@@ -232,6 +270,7 @@ def render(
     timing = build_timing(deck, speed, min_scene_ms, max_scene_ms)
 
     for scene, timing_row in zip(deck.get("scenes", []), timing):
+        scene = {**({"style": deck.get("style")} if deck.get("style") else {}), **scene}
         duration = int(timing_row["durationMs"])
         count = max(8, math.ceil(duration / frame_ms))
         for i in range(count):

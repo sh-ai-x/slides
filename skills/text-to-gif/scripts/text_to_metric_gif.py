@@ -76,6 +76,30 @@ def should_render_chart(scene: dict[str, Any]) -> bool:
     return has_numeric_metric(scene)
 
 
+def is_dark_neon(scene: dict[str, Any]) -> bool:
+    style = str(scene.get("style") or scene.get("theme") or "").lower().replace("-", "_")
+    return style in {"dark_neon", "neon_dark", "creator_dark", "youtube_neon"}
+
+
+def draw_neon_hub(draw: ImageDraw.ImageDraw, width: int, height: int, progress: float) -> None:
+    cx = int(width * 0.73)
+    cy = int(height * 0.44)
+    growth = ease_out_cubic(min(progress / 0.72, 1))
+    radius = int(min(width, height) * 0.17 * growth)
+    for i in range(20):
+        angle = math.tau * i / 20 + 0.2
+        inner = int(radius * 0.18)
+        outer = radius + int((i % 4) * radius * 0.22)
+        x1 = cx + int(math.cos(angle) * inner)
+        y1 = cy + int(math.sin(angle) * inner)
+        x2 = cx + int(math.cos(angle) * outer)
+        y2 = cy + int(math.sin(angle) * outer)
+        fill = "#27F59B" if i % 2 else "#FF744F"
+        draw.line((x1, y1, x2, y2), fill=fill, width=max(2, int(width * 0.003)))
+    r = max(16, int(radius * 0.24))
+    draw.ellipse((cx - r, cy - r, cx + r, cy + r), fill="#FF744F", outline="#27F59B", width=max(2, int(width * 0.003)))
+
+
 def wrap_text(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.ImageFont, max_width: int) -> list[str]:
     words = list(text) if re.search(r"[\u3131-\ud7a3]", text) else text.split()
     lines: list[str] = []
@@ -117,7 +141,17 @@ def render_scene_frame(
     palette: dict[str, str],
 ) -> Image.Image:
     width, height = size
-    img = Image.new("RGB", size, palette["bg"])
+    dark = is_dark_neon(scene)
+    scene_palette = palette
+    if dark:
+        scene_palette = {
+            "bg": "#030504",
+            "ink": "#F8FAFC",
+            "muted": "#A8B3BD",
+            "accent": "#27F59B",
+            "track": "#253036",
+        }
+    img = Image.new("RGB", size, scene_palette["bg"])
     draw = ImageDraw.Draw(img)
 
     pad_x = int(width * 0.075)
@@ -131,14 +165,17 @@ def render_scene_frame(
     body_font = find_font(max(18, int(width * 0.026)))
     footer_font = find_font(max(12, int(width * 0.014)))
 
-    draw.rectangle((pad_x, int(pad_y * 0.7), pad_x + accent_w, int(pad_y * 0.7) + accent_h), fill=palette["accent"])
+    if dark:
+        draw_neon_hub(draw, width, height, progress)
+
+    draw.rectangle((pad_x, int(pad_y * 0.7), pad_x + accent_w, int(pad_y * 0.7) + accent_h), fill=scene_palette["accent"])
 
     fade = ease_out_cubic(min(progress / 0.45, 1.0))
-    text_fill = palette["ink"] if fade > 0.2 else palette["muted"]
+    text_fill = scene_palette["ink"] if fade > 0.2 else scene_palette["muted"]
 
-    draw.text((pad_x, pad_y), str(scene.get("eyebrow", "")).upper(), font=eyebrow_font, fill=palette["accent"])
+    draw.text((pad_x, pad_y), str(scene.get("eyebrow", "")).upper(), font=eyebrow_font, fill=scene_palette["accent"])
 
-    title_lines = wrap_text(draw, str(scene.get("title", "")), title_font, int(width * 0.78))
+    title_lines = wrap_text(draw, str(scene.get("title", "")), title_font, int(width * (0.56 if dark else 0.78)))
     y = draw_text_lines(draw, (pad_x, int(pad_y * 1.38)), title_lines, title_font, text_fill, int(height * 0.018))
 
     metric_y = y + int(height * 0.045)
@@ -146,13 +183,13 @@ def render_scene_frame(
         metric_target, prefix, suffix, decimals = split_metric(str(scene.get("metric", "")))
         count_progress = ease_out_cubic(min(progress / 0.68, 1.0))
         metric_text = format_metric(metric_target * count_progress, prefix, suffix, decimals)
-        draw.text((pad_x, metric_y), metric_text, font=metric_font, fill=palette["accent"])
+        draw.text((pad_x, metric_y), metric_text, font=metric_font, fill=scene_palette["accent"])
         body_y = metric_y + int(height * 0.21)
     else:
         body_y = metric_y + int(height * 0.02)
 
-    body_lines = wrap_text(draw, str(scene.get("body", "")), body_font, int(width * 0.72))
-    draw_text_lines(draw, (pad_x, body_y), body_lines, body_font, palette["muted"], int(height * 0.014))
+    body_lines = wrap_text(draw, str(scene.get("body", "")), body_font, int(width * (0.55 if dark else 0.72)))
+    draw_text_lines(draw, (pad_x, body_y), body_lines, body_font, scene_palette["muted"], int(height * 0.014))
 
     bar_value = float(scene.get("bar", 0) or 0)
     if bar_value and should_render_chart(scene):
@@ -161,12 +198,12 @@ def render_scene_frame(
         track_w = int(width * 0.72)
         track_h = max(10, int(height * 0.024))
         fill_w = int(track_w * (bar_value / 100.0) * ease_out_cubic(min(progress / 0.72, 1.0)))
-        draw.rectangle((track_x, track_y, track_x + track_w, track_y + track_h), fill=palette["track"])
-        draw.rectangle((track_x, track_y, track_x + fill_w, track_y + track_h), fill=palette["accent"])
-        draw.text((track_x, track_y - int(height * 0.045)), f"{int(bar_value)}%", font=footer_font, fill=palette["ink"])
+        draw.rectangle((track_x, track_y, track_x + track_w, track_y + track_h), fill=scene_palette["track"])
+        draw.rectangle((track_x, track_y, track_x + fill_w, track_y + track_h), fill=scene_palette["accent"])
+        draw.text((track_x, track_y - int(height * 0.045)), f"{int(bar_value)}%", font=footer_font, fill=scene_palette["ink"])
 
-    footer = str(scene.get("footer", "Text to GIF / metric motion"))
-    draw.text((pad_x, height - int(height * 0.07)), footer, font=footer_font, fill=palette["muted"])
+    footer = str(scene.get("footer", "Dark-neon explainer / GIF motion" if dark else "Text to GIF / metric motion"))
+    draw.text((pad_x, height - int(height * 0.07)), footer, font=footer_font, fill=scene_palette["muted"])
     return img
 
 
@@ -185,6 +222,7 @@ def render_gif(deck: dict[str, Any], output: Path, fmt: str, fps: int) -> None:
     durations: list[int] = []
     frame_duration = int(1000 / fps)
     for scene in deck.get("scenes", []):
+        scene = {**({"style": deck.get("style")} if deck.get("style") else {}), **scene}
         scene_duration = int(scene.get("duration", 900))
         frame_count = max(4, math.ceil(scene_duration / frame_duration))
         for frame in range(frame_count):

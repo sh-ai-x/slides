@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import re
 from pathlib import Path
 from typing import Any
@@ -66,20 +67,51 @@ def line_height(draw: ImageDraw.ImageDraw, face: ImageFont.ImageFont) -> int:
     return box[3] - box[1]
 
 
+def is_dark_neon(slide: dict[str, Any]) -> bool:
+    style = str(slide.get("style") or slide.get("theme") or "").lower().replace("-", "_")
+    return style in {"dark_neon", "neon_dark", "creator_dark", "youtube_neon"}
+
+
+def draw_neon_hub(draw: ImageDraw.ImageDraw, w: int, h: int, accent: str, progress: float = 1.0) -> None:
+    cx = int(w * 0.72)
+    cy = int(h * 0.45)
+    radius = int(min(w, h) * 0.16 * progress)
+    for i in range(18):
+        angle = (math.tau * i / 18) + 0.12
+        inner = int(radius * 0.22)
+        outer = radius + int((i % 3) * radius * 0.28)
+        x1 = cx + int(math.cos(angle) * inner)
+        y1 = cy + int(math.sin(angle) * inner)
+        x2 = cx + int(math.cos(angle) * outer)
+        y2 = cy + int(math.sin(angle) * outer)
+        fill = accent if i % 2 else "#27F59B"
+        draw.line((x1, y1, x2, y2), fill=fill, width=max(2, int(w * 0.003)))
+    r = max(18, int(radius * 0.26))
+    draw.ellipse((cx - r, cy - r, cx + r, cy + r), fill=accent, outline="#27F59B", width=max(2, int(w * 0.003)))
+    for ox, oy, label in [(-0.16, -0.16, "AI"), (0.18, -0.08, "{}"), (-0.10, 0.20, "API")]:
+        bx = cx + int(w * ox)
+        by = cy + int(h * oy)
+        bw = int(w * 0.07)
+        bh = int(h * 0.06)
+        draw.rounded_rectangle((bx, by, bx + bw, by + bh), radius=10, fill="#111719", outline="#24E89A", width=1)
+        draw.text((bx + int(bw * 0.22), by + int(bh * 0.22)), label, font=font(max(12, int(w * 0.014))), fill="#E9FFF6")
+
+
 def render(slide: dict[str, Any], size: tuple[int, int]) -> Image.Image:
     w, h = size
-    image = Image.new("RGB", size, "#F7F8FA")
+    dark = is_dark_neon(slide)
+    image = Image.new("RGB", size, "#030504" if dark else "#F7F8FA")
     draw = ImageDraw.Draw(image)
 
-    ink = "#111827"
-    muted = "#5F6673"
-    accent = str(slide.get("accent") or "#C0392B")
-    track = "#E4E7EC"
+    ink = "#F8FAFC" if dark else "#111827"
+    muted = "#A8B3BD" if dark else "#5F6673"
+    accent = str(slide.get("accent") or ("#27F59B" if dark else "#C0392B"))
+    track = "#243035" if dark else "#E4E7EC"
 
     px = int(w * 0.075)
     top_margin = int(h * 0.105)
     footer_y = h - int(h * 0.07)
-    content_w = int(w * 0.72)
+    content_w = int(w * (0.56 if dark else 0.72))
 
     eyebrow_font = font(max(15, int(w * 0.016)))
     title_font = font(max(34, int(w * 0.048)))
@@ -103,6 +135,9 @@ def render(slide: dict[str, Any], size: tuple[int, int]) -> Image.Image:
     total_content = title_block + metric_block + body_block + points_block + int(h * 0.13)
     py = max(top_margin, int((footer_y - total_content) / 2))
 
+    if dark:
+        draw_neon_hub(draw, w, h, "#FF744F")
+
     draw.rectangle((px, int(top_margin * 0.7), px + int(w * 0.075), int(top_margin * 0.7) + max(5, int(h * 0.008))), fill=accent)
 
     eyebrow = str(slide.get("eyebrow") or "One-slide brief").upper()
@@ -124,7 +159,9 @@ def render(slide: dict[str, Any], size: tuple[int, int]) -> Image.Image:
         for point in points:
             if y + chip_h > footer_y - int(h * 0.025):
                 break
-            draw.rounded_rectangle((px, y, px + int(w * 0.68), y + chip_h), radius=6, fill="#FFFFFF", outline=track, width=1)
+            chip_fill = "#091012" if dark else "#FFFFFF"
+            chip_w = int(w * (0.52 if dark else 0.68))
+            draw.rounded_rectangle((px, y, px + chip_w, y + chip_h), radius=6, fill=chip_fill, outline=track, width=1)
             marker_y = y + chip_h // 2 - 4
             draw.rounded_rectangle((px + 16, marker_y, px + 26, marker_y + 8), radius=3, fill=accent)
             draw.text((px + 40, y + int(chip_h * 0.24)), point, font=point_font, fill=ink)

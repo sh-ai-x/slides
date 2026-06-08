@@ -32,6 +32,7 @@ If the user also needs editable PPT or Google Slides upload, pair this with the 
 ## Style Defaults
 
 - Use consulting-style hierarchy for business scripts.
+- For AI, coding, agent, skill, automation, or creator-style tutorial scripts, use the dark neon explainer direction from `../text-to-ppt-video/references/dark-neon-explainer-style.md`: near-black stage, oversized hook text, neon green/orange accent, and one symbolic hub or timeline visual.
 - Lead with numbers and quantified claims when available.
 - Use one accent color, default red `#c0392b`.
 - Avoid emoji, gradients, decorative cards, and ornamental icons unless the user asks for a social style.

@@ -4,10 +4,12 @@ Use this pipeline when the final deliverable is MP4/WebM. The required stack is:
 
 - ffmpeg capability through system `ffmpeg` or Python `imageio-ffmpeg`
 - Whisper through CLI `whisper` or Python `openai-whisper`
-- Python `moviepy` for the default MP4 encode path
-- Remotion or HyperFrames/HeyGen-style HTML rendering when that renderer is available
+- Remotion for the default motion renderer and MP4/WebM render path
+- Python `moviepy` only for fallback muxing/diagnostics when Remotion is unavailable
 
 GIF output is only a quick visual proof. Do not treat GIF as the final result for this skill.
+
+Motion must be authored inside Remotion scenes. Do not create extra slide pages or duplicate logical scenes to simulate animation states.
 
 ## Token-Efficient File Contract
 
@@ -18,7 +20,8 @@ Keep large artifacts on disk and pass file paths between tools:
 - `whisper.json`: Whisper segments
 - `timing.json`: one row per page with `startMs`, `endMs`, `durationMs`, `script`
 - `render-props.json`: renderer input combining scenes and timing
-- `final.mp4` or `final.webm`: encoded video
+- `render-master.mp4`: normal-speed Remotion source master
+- `final.mp4` or `final.webm`: delivery video, default `1.3x`
 
 Codex should inspect summaries, row counts, durations, and representative snippets, not paste entire transcripts.
 
@@ -28,11 +31,11 @@ Codex should inspect summaries, row counts, durations, and representative snippe
 scripts/check_toolchain.sh
 ```
 
-Require Python packages `moviepy`, `imageio-ffmpeg`, `openai-whisper`, `gTTS` when using the default local path. System `ffmpeg`, `ffprobe`, `whisper`, Remotion, or HyperFrames are preferred when available but not required for the Python fallback.
+Require Remotion and ffmpeg for final video rendering. Python packages `moviepy`, `imageio-ffmpeg`, `openai-whisper`, and `gTTS` support narration, Whisper timing, and fallback diagnostics.
 
 ## 2. Scene Plan
 
-Create one scene per slide/page:
+Create one scene per slide/page. A scene is a logical slide, not a frame of animation:
 
 ```json
 {
@@ -51,13 +54,14 @@ Create one scene per slide/page:
 ```
 
 Do not put long narration in visible slide text. Keep it in `script`.
+Only include `metric` and `bar` when the number should appear on-screen. Conceptual scenes should omit both and use text entrance motion only.
 
 ## 3. Audio Normalize With ffmpeg
 
 For supplied narration:
 
 ```bash
-python scripts/create_timed_narration.py out/timing.json --output out/audio.wav --work-dir out/narration-work --engine gtts
+python scripts/create_timed_narration.py out/timing.json --output out/audio.wav --work-dir out/narration-work --engine gtts --pace 1.08
 ```
 
 For supplied narration, normalize with system ffmpeg or `imageio-ffmpeg`.
@@ -74,7 +78,7 @@ python -c 'from moviepy import AudioFileClip; c=AudioFileClip("out/audio.wav"); 
 python -m whisper out/audio.wav --model tiny --language ko --output_format json --output_dir out
 ```
 
-Use a smaller model only when speed is more important than timing quality.
+Use `tiny` for token- and runtime-efficient timing verification. Use a larger model only when accurate captions are requested.
 
 ## 5. Build Page Timing JSON
 
@@ -101,9 +105,31 @@ The script maps Whisper segment timing to the 1:1 page/script scene plan. It out
 }
 ```
 
-## 6A. Default Python Route
+## 6A. Remotion Route
 
-Use this route when Remotion/HyperFrames are not installed:
+Use Remotion for final motion output:
+
+- one logical scene per `<Sequence>`
+- `durationInFrames = Math.ceil(durationMs / 1000 * fps)`
+- `from` frame comes from cumulative timing
+- metric count-up uses `interpolate()` only when `metric` is present
+- gauge uses one `scaleX` bar fill only when `bar` is present
+- text/panel entrances use opacity and transform
+- narration audio is one global audio track
+- captions use Whisper segment timings
+
+Recommended render command:
+
+```bash
+npx remotion render src/index.ts TextToPptVideo out/render-master.mp4 --props=out/render-props.json
+python scripts/speed_up_video.py out/render-master.mp4 --output out/final.mp4 --speed 1.3 --fps 30
+```
+
+Use the `1.3x` file as the final delivery unless the user asks for a slower lecture-style version. This preserves Remotion-authored scene motion while shortening the overall runtime.
+
+## 6B. Python Diagnostic Route
+
+Use this route only when Remotion is unavailable and the user accepts a local fallback or diagnostic MP4:
 
 ```bash
 python scripts/render_video_frames.py scenes.json out/timing.json --output-dir out/frames --format wide --fps 10
@@ -111,42 +137,7 @@ python scripts/png_frames_to_mp4.py out/frames --output out/video.mp4 --fps 10
 python scripts/mux_audio_to_mp4.py out/video.mp4 out/audio.wav --output out/final.mp4 --fps 10
 ```
 
-This route uses `moviepy + imageio-ffmpeg` and keeps timing exactly aligned to `timing.json`.
-
-## 6B. Remotion Route
-
-Use Remotion when React components, precise frame math, chart interpolation, or MP4/WebM rendering are preferred.
-
-Renderer mapping:
-
-- one scene per `<Sequence>`
-- `durationInFrames = Math.ceil(durationMs / 1000 * fps)`
-- `from` frame comes from cumulative timing
-- chart metric uses count-up interpolation
-- gauge uses one `scaleX` bar fill only
-- narration audio is one global audio track
-- captions use Whisper segment timings
-
-Recommended render command:
-
-```bash
-npx remotion render src/index.ts TextToPptVideo out/final.mp4 --props=out/render-props.json
-```
-
-## 6C. HyperFrames / HeyGen-Style HTML Route
-
-Use HyperFrames/HeyGen-style HTML when the user wants HTML-authored scenes, GSAP timelines, captions, voiceover, or a HeyGen-compatible video workflow.
-
-Renderer mapping:
-
-- root composition duration equals final audio duration
-- each page scene uses `data-start` and `data-duration` from `timing.json`
-- GSAP timelines animate only visual properties
-- audio is a separate track
-- no infinite loops
-- captions are timed from Whisper segments
-
-Render through the available HyperFrames/HeyGen CLI, then encode or normalize with ffmpeg if needed.
+This route uses PNG frame sequences internally only for encoding. Do not deliver those PNGs as final image artifacts.
 
 ## 7. Encode And Verify
 
@@ -156,6 +147,8 @@ Verify:
 python -c 'from moviepy import VideoFileClip; c=VideoFileClip("out/final.mp4"); print(c.duration, c.fps, c.size, c.audio is not None); c.close()'
 ```
 
+Expected default delivery pace is about `original duration / 1.3`.
+
 ## Fallback
 
-If the required toolchain is not installed, stop after producing `scenes.json` and explain which required tool is missing. Use `scripts/render_lightweight_video.py` only as a local preview, not as the skill's final video path.
+If Remotion is not installed, stop after producing `scenes.json`, `timing.json`, and optional GIF preview unless the user explicitly approves the Python diagnostic route. Use `scripts/render_lightweight_video.py` only as a local preview, not as the skill's final video path.

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Render exactly one slide PNG from a compact JSON plan."""
+"""Render exactly one slide GIF from a compact JSON plan."""
 
 from __future__ import annotations
 
@@ -139,7 +139,7 @@ def render(slide: dict[str, Any], size: tuple[int, int]) -> Image.Image:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("input", type=Path)
-    parser.add_argument("--output", "-o", type=Path, default=Path("one-slide.png"))
+    parser.add_argument("--output", "-o", type=Path, default=Path("one-slide.gif"))
     parser.add_argument("--format", choices=FORMATS.keys(), default="wide")
     args = parser.parse_args()
 

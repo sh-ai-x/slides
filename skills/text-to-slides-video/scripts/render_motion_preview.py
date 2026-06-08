@@ -57,6 +57,18 @@ def metric_text(value: float, prefix: str, suffix: str, decimals: int) -> str:
     return f"{prefix}{body}{suffix}"
 
 
+def has_numeric_metric(scene: dict[str, Any]) -> bool:
+    return bool(re.search(r"\d", str(scene.get("metric", ""))))
+
+
+def should_render_chart(scene: dict[str, Any]) -> bool:
+    if scene.get("chart") is False or scene.get("showChart") is False:
+        return False
+    if scene.get("chart") is True or scene.get("showChart") is True:
+        return True
+    return has_numeric_metric(scene)
+
+
 def wrap(draw: ImageDraw.ImageDraw, text: str, face: ImageFont.ImageFont, max_width: int, max_lines: int) -> list[str]:
     korean = bool(re.search(r"[\u3131-\ud7a3]", text))
     units = list(text) if korean else text.split()
@@ -114,16 +126,20 @@ def render_frame(scene: dict[str, Any], progress: float, size: tuple[int, int]) 
     title_lines = wrap(draw, str(scene.get("title", "")), title_font, int(w * 0.8), 2)
     y = draw_lines(draw, (px, int(py * 1.38) + offset), title_lines, title_font, ink, int(h * 0.018))
 
-    target, prefix, suffix, decimals = split_metric(str(scene.get("metric", "")))
-    count = target * ease_out_cubic(min(progress / 0.82, 1))
     metric_y = y + int(h * 0.05)
-    draw.text((px, metric_y), metric_text(count, prefix, suffix, decimals), font=metric_font, fill=accent)
+    if has_numeric_metric(scene):
+        target, prefix, suffix, decimals = split_metric(str(scene.get("metric", "")))
+        count = target * ease_out_cubic(min(progress / 0.82, 1))
+        draw.text((px, metric_y), metric_text(count, prefix, suffix, decimals), font=metric_font, fill=accent)
+        body_y = metric_y + int(h * 0.22)
+    else:
+        body_y = metric_y + int(h * 0.02)
 
     body_lines = wrap(draw, str(scene.get("body", "")), body_font, int(w * 0.72), 2)
-    draw_lines(draw, (px, metric_y + int(h * 0.22)), body_lines, body_font, muted, int(h * 0.014))
+    draw_lines(draw, (px, body_y), body_lines, body_font, muted, int(h * 0.014))
 
     value = float(scene.get("bar", 0) or 0)
-    if value:
+    if value and should_render_chart(scene):
         bx = px
         by = int(h * 0.79)
         bw = int(w * 0.72)

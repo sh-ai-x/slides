@@ -1,6 +1,6 @@
 # Lightweight Preview Output
 
-This reference is only for quick GIF previews. The final output for `text-to-ppt-video` must use `ffmpeg + Whisper + Remotion` or `ffmpeg + Whisper + HyperFrames/HeyGen-style HTML`.
+This reference is only for quick GIF previews. The final output for `text-to-ppt-video` must use `ffmpeg + Whisper + Remotion`.
 
 ## Formats
 
@@ -14,7 +14,7 @@ This reference is only for quick GIF previews. The final output for `text-to-ppt
 - auto duration from each scene's `script` or `notes` only when Whisper timing is not available
 - fallback 2400ms minimum per scene
 - 500ms+ final hold
-- slow bar fill through 85% of the scene
+- bar fill through 85% of the scene only when a useful metric/bar exists
 - no separate white sweep overlay on gauges
 
 ## Speech Speed
@@ -22,14 +22,14 @@ This reference is only for quick GIF previews. The final output for `text-to-ppt
 Use:
 
 ```bash
-python scripts/render_lightweight_video.py scenes.json --output preview.gif --speech-speed normal --min-scene-ms 2400 --max-scene-ms 12000
+python scripts/render_lightweight_video.py scenes.json --output preview.gif --speech-speed fast --min-scene-ms 2200 --max-scene-ms 10000
 ```
 
 Supported speeds:
 
 - `slow`: slower presenter or dense technical narration
-- `normal`: default Korean/English presentation pace
-- `fast`: teaser or quick social preview
+- `normal`: careful Korean/English presentation pace
+- `fast`: default faster presentation pace
 
 If a scene includes explicit `durationMs`, that value overrides automatic speech timing. Legacy `duration` is also accepted.
 Use `--max-scene-ms` to prevent long scripts from being clipped too aggressively, or `--min-scene-ms` to keep short slides readable.
@@ -52,10 +52,12 @@ Use one scene object per source slide/page:
 Render with timing export:
 
 ```bash
-python scripts/render_lightweight_video.py scenes.json --output preview.gif --speech-speed normal --min-scene-ms 2400 --max-scene-ms 12000 --timing-output timing.json
+python scripts/render_lightweight_video.py scenes.json --output preview.gif --speech-speed fast --min-scene-ms 2200 --max-scene-ms 10000 --timing-output timing.json
 ```
 
 The preview timing JSON includes `page`, `startMs`, `endMs`, `durationMs`, `title`, and `script`. For final MP4/WebM, prefer Whisper-derived timing from `scripts/build_video_timing.py`.
+
+Only include `metric` and `bar` when the number should appear on-screen. Conceptual scenes should omit both and use text entrance motion only.
 
 ## Scene Coverage
 

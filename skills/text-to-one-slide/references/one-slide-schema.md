@@ -1,6 +1,6 @@
 # One Slide Schema
 
-Use this schema when creating a single-slide PNG or a one-slide PPTX handoff.
+Use this schema when creating a single-slide GIF or a one-slide PPTX handoff.
 
 ```json
 {

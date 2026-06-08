@@ -55,6 +55,18 @@ def metric_label(value: float, prefix: str, suffix: str, decimals: int) -> str:
     return f"{prefix}{body}{suffix}"
 
 
+def has_numeric_metric(scene: dict[str, Any]) -> bool:
+    return bool(re.search(r"\d", str(scene.get("metric", ""))))
+
+
+def should_render_chart(scene: dict[str, Any]) -> bool:
+    if scene.get("chart") is False or scene.get("showChart") is False:
+        return False
+    if scene.get("chart") is True or scene.get("showChart") is True:
+        return True
+    return has_numeric_metric(scene)
+
+
 def wrap(draw: ImageDraw.ImageDraw, text: str, face: ImageFont.ImageFont, max_width: int, max_lines: int) -> list[str]:
     korean = bool(re.search(r"[\u3131-\ud7a3]", text))
     units = list(text) if korean else text.split()
@@ -95,13 +107,13 @@ def estimate_speech_duration_ms(text: str, speed: str, min_scene_ms: int, max_sc
 
     chars_per_second = {
         "slow": 5.8,
-        "normal": 7.2,
-        "fast": 8.8,
+        "normal": 7.9,
+        "fast": 9.6,
     }[speed]
     words_per_second = {
         "slow": 1.7,
-        "normal": 2.25,
-        "fast": 2.8,
+        "normal": 2.45,
+        "fast": 3.05,
     }[speed]
 
     seconds = 0.0
@@ -152,16 +164,21 @@ def render_frame(scene: dict[str, Any], progress: float, size: tuple[int, int]) 
     title_lines = wrap(draw, str(scene.get("title", "")), title_font, int(w * 0.8), 2)
     y = draw_lines(draw, (px, int(py * 1.38) + offset), title_lines, title_font, ink, int(h * 0.018))
 
-    target, prefix, suffix, decimals = split_metric(str(scene.get("metric", "")))
-    count = target * ease_out_cubic(min(progress / 0.82, 1))
+    metric_text = str(scene.get("metric", "")).strip()
     metric_y = y + int(h * 0.05)
-    draw.text((px, metric_y), metric_label(count, prefix, suffix, decimals), font=metric_font, fill=accent)
+    if metric_text and has_numeric_metric(scene):
+        target, prefix, suffix, decimals = split_metric(metric_text)
+        count = target * ease_out_cubic(min(progress / 0.82, 1))
+        draw.text((px, metric_y), metric_label(count, prefix, suffix, decimals), font=metric_font, fill=accent)
+        body_y = metric_y + int(h * 0.22)
+    else:
+        body_y = metric_y + int(h * 0.02)
 
     body_lines = wrap(draw, str(scene.get("body", "")), body_font, int(w * 0.72), 2)
-    draw_lines(draw, (px, metric_y + int(h * 0.22)), body_lines, body_font, muted, int(h * 0.014))
+    draw_lines(draw, (px, body_y), body_lines, body_font, muted, int(h * 0.014))
 
     value = float(scene.get("bar", 0) or 0)
-    if value:
+    if value and should_render_chart(scene):
         bx = px
         by = int(h * 0.79)
         bw = int(w * 0.72)
@@ -242,7 +259,7 @@ def main() -> int:
     parser.add_argument("--output", "-o", type=Path, default=Path("lightweight-video.gif"))
     parser.add_argument("--format", choices=FORMATS.keys(), default="wide")
     parser.add_argument("--fps", type=int, default=10)
-    parser.add_argument("--speech-speed", choices=["slow", "normal", "fast"], default="normal")
+    parser.add_argument("--speech-speed", choices=["slow", "normal", "fast"], default="fast")
     parser.add_argument("--min-scene-ms", type=int, default=2400)
     parser.add_argument("--max-scene-ms", type=int, default=12000)
     parser.add_argument("--timing-output", type=Path, default=None, help="Write page/script timing JSON")

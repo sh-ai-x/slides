@@ -63,6 +63,7 @@ def main() -> int:
     parser.add_argument("--engine", choices=["gtts", "say"], default="gtts")
     parser.add_argument("--voice", default="Yuna")
     parser.add_argument("--rate", default="205")
+    parser.add_argument("--pace", type=float, default=1.08, help="Narration speed multiplier before padding to the target timing")
     args = parser.parse_args()
 
     ffmpeg = imageio_ffmpeg.get_ffmpeg_exe()
@@ -90,7 +91,7 @@ def main() -> int:
             run([ffmpeg, "-y", "-i", str(raw), "-ac", "1", "-ar", "44100", str(wav)])
 
         source_duration = max(0.1, duration_seconds(ffmpeg, wav))
-        ratio = source_duration / target
+        ratio = (source_duration / target) * max(0.5, args.pace)
         filter_chain = f"{atempo_chain(ratio)},apad,atrim=0:{target:.3f}"
         run([ffmpeg, "-y", "-i", str(wav), "-af", filter_chain, "-ac", "1", "-ar", "44100", str(fixed)])
         segment_paths.append(fixed)

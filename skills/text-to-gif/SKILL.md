@@ -7,7 +7,7 @@ description: Turn text, scripts, outlines, Korean drafts, metric narratives, or 
 
 ## Overview
 
-Create a short animated GIF from text. Default to metric-led motion when the source includes numbers, ROI claims, charts, comparisons, or KPI tables.
+Create a short animated GIF from text. Use metric-led motion only when the source includes useful numbers, ROI claims, charts, comparisons, or KPI tables.
 
 ## Workflow
 
@@ -16,7 +16,7 @@ Create a short animated GIF from text. Default to metric-led motion when the sou
    - `wide`: 1280x720, default for presentation/video previews.
    - `square`: 1080x1080 for social feeds.
    - `card`: 1080x1350 for card-news style.
-3. Build scene JSON with title, metric, body, optional bar value, and duration.
+3. Build compact scene JSON with title, body, optional metric/bar only when numerically useful, and duration.
 4. Render with `scripts/text_to_metric_gif.py` using Python/Pillow.
 5. Verify the GIF exists, is non-empty, opens as an animated image, and has multiple frames.
 
@@ -31,6 +31,14 @@ Read `references/gif-motion.md` whenever numbers or charts exist. Default effect
 - looping final hold so the GIF is readable
 
 Keep final text values visible in later frames; the GIF must still make sense if viewed as a thumbnail.
+
+Do not add count-up text, gauges, or bar motion to conceptual scenes with no useful number. If a scene has no numeric metric, render title/body entrance motion only.
+
+## Token Optimization Rules
+
+- Reuse the same compact scenes JSON used for PPT, slides, or video variants.
+- Save the GIF and source JSON as files; report paths and frame/dimension metadata instead of pasting large JSON.
+- Keep preview FPS low (`8-12`) unless the user asks for smoother motion.
 
 ## Tool Choice
 

@@ -9,7 +9,7 @@ description: Create exactly one presentation slide from text, markdown, Korean d
 
 Turn source text into exactly one slide. Do not create a deck, carousel, or multi-page outline unless the user changes the request.
 
-Default output is a 16:9 PNG plus a compact JSON plan. If the user asks for editable PPTX, pair with `text-to-ppt` but still create a single-slide deck only.
+Default output is a 16:9 GIF plus a compact JSON plan. If the user asks for editable PPTX, pair with `text-to-ppt` but still create a single-slide deck only.
 
 ## Workflow
 
@@ -21,7 +21,7 @@ Default output is a 16:9 PNG plus a compact JSON plan. If the user asks for edit
    - `comparison`: two sides and one conclusion.
    - `title`: strong title, subtitle, source/date.
 3. Build a single JSON object with short visible text.
-4. Render with `scripts/render_one_slide.py` when a PNG is useful.
+4. Render with `scripts/render_one_slide.py` when a visual proof is useful.
 5. Verify the output is one slide only and text is readable.
 
 ## Rules
@@ -32,12 +32,13 @@ Default output is a 16:9 PNG plus a compact JSON plan. If the user asks for edit
 - Put long source detail into `notes`, not on the slide.
 - Use one accent color, default red `#c0392b`.
 - Prefer dense but readable consulting-style composition over decorative cards.
-- If metrics exist, show the most important metric prominently.
+- If metrics are central to the message, show the most important metric prominently. Do not add a large number just because the source mentions a list count.
+- Use compact JSON and local rendering scripts; do not duplicate long source text in chat or visible slide text.
 
 ## Quick Start
 
 ```bash
-python scripts/render_one_slide.py one-slide.json --output one-slide.png --format wide
+python scripts/render_one_slide.py one-slide.json --output one-slide.gif --format wide
 ```
 
 JSON shape:
@@ -60,5 +61,5 @@ JSON shape:
 
 ## Resources
 
-- `scripts/render_one_slide.py`: render one slide PNG from JSON.
+- `scripts/render_one_slide.py`: render one slide GIF from JSON.
 - `references/one-slide-schema.md`: schema and slide-type guidance.

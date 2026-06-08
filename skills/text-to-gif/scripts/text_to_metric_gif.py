@@ -64,6 +64,18 @@ def format_metric(value: float, prefix: str, suffix: str, decimals: int) -> str:
     return f"{prefix}{body}{suffix}"
 
 
+def has_numeric_metric(scene: dict[str, Any]) -> bool:
+    return bool(re.search(r"\d", str(scene.get("metric", ""))))
+
+
+def should_render_chart(scene: dict[str, Any]) -> bool:
+    if scene.get("chart") is False or scene.get("showChart") is False:
+        return False
+    if scene.get("chart") is True or scene.get("showChart") is True:
+        return True
+    return has_numeric_metric(scene)
+
+
 def wrap_text(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.ImageFont, max_width: int) -> list[str]:
     words = list(text) if re.search(r"[\u3131-\ud7a3]", text) else text.split()
     lines: list[str] = []
@@ -129,17 +141,21 @@ def render_scene_frame(
     title_lines = wrap_text(draw, str(scene.get("title", "")), title_font, int(width * 0.78))
     y = draw_text_lines(draw, (pad_x, int(pad_y * 1.38)), title_lines, title_font, text_fill, int(height * 0.018))
 
-    metric_target, prefix, suffix, decimals = split_metric(str(scene.get("metric", "")))
-    count_progress = ease_out_cubic(min(progress / 0.68, 1.0))
-    metric_text = format_metric(metric_target * count_progress, prefix, suffix, decimals)
     metric_y = y + int(height * 0.045)
-    draw.text((pad_x, metric_y), metric_text, font=metric_font, fill=palette["accent"])
+    if has_numeric_metric(scene):
+        metric_target, prefix, suffix, decimals = split_metric(str(scene.get("metric", "")))
+        count_progress = ease_out_cubic(min(progress / 0.68, 1.0))
+        metric_text = format_metric(metric_target * count_progress, prefix, suffix, decimals)
+        draw.text((pad_x, metric_y), metric_text, font=metric_font, fill=palette["accent"])
+        body_y = metric_y + int(height * 0.21)
+    else:
+        body_y = metric_y + int(height * 0.02)
 
     body_lines = wrap_text(draw, str(scene.get("body", "")), body_font, int(width * 0.72))
-    draw_text_lines(draw, (pad_x, metric_y + int(height * 0.21)), body_lines, body_font, palette["muted"], int(height * 0.014))
+    draw_text_lines(draw, (pad_x, body_y), body_lines, body_font, palette["muted"], int(height * 0.014))
 
     bar_value = float(scene.get("bar", 0) or 0)
-    if bar_value:
+    if bar_value and should_render_chart(scene):
         track_x = pad_x
         track_y = int(height * 0.78)
         track_w = int(width * 0.72)
@@ -147,8 +163,6 @@ def render_scene_frame(
         fill_w = int(track_w * (bar_value / 100.0) * ease_out_cubic(min(progress / 0.72, 1.0)))
         draw.rectangle((track_x, track_y, track_x + track_w, track_y + track_h), fill=palette["track"])
         draw.rectangle((track_x, track_y, track_x + fill_w, track_y + track_h), fill=palette["accent"])
-        sweep_x = track_x + int((track_w + int(width * 0.16)) * progress) - int(width * 0.16)
-        draw.rectangle((sweep_x, track_y, sweep_x + int(width * 0.035), track_y + track_h), fill=palette["sweep"])
         draw.text((track_x, track_y - int(height * 0.045)), f"{int(bar_value)}%", font=footer_font, fill=palette["ink"])
 
     footer = str(scene.get("footer", "Text to GIF / metric motion"))

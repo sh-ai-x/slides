@@ -2,6 +2,18 @@
 
 ## Routes
 
+### remotion-video
+
+Use this route for real motion output:
+
+1. Convert each logical slide to one React scene component.
+2. Use `<Sequence>` per logical scene, not per animation state.
+3. Map `duration` milliseconds to frames.
+4. Animate text with opacity/transform, not duplicate pages.
+5. Map counters to `interpolate(frame, ...)` only when `metric` is meaningful.
+6. Map bars to `scaleX(...)` only when `bar` is meaningful.
+7. Render MP4/WebM through Remotion.
+
 ### gif-preview
 
 Use this route for deterministic testing without ffmpeg:
@@ -10,7 +22,7 @@ Use this route for deterministic testing without ffmpeg:
 python scripts/render_motion_preview.py scenes.json --output preview.gif --format wide --fps 10
 ```
 
-This route produces an animated GIF with metric count-up, bar fill, and scene transitions. It is a proof of motion and story timing, not a final high-fidelity video master.
+This route produces an animated GIF proof of motion and story timing. It is not a final high-fidelity video master.
 
 ### html-motion
 
@@ -21,17 +33,6 @@ Use `text-to-slides` rules to build responsive HTML:
 - `data-count-to`, `data-prefix`, `data-suffix` for counters
 - `--value` for bars
 - responsive CSS plus Remotion metadata
-
-### remotion-video
-
-Use when Remotion and ffmpeg are available:
-
-1. Convert each scene to a React component.
-2. Use `<Sequence>` per scene.
-3. Map `duration` milliseconds to frames.
-4. Map counters to `interpolate(frame, ...)`.
-5. Map bars to `scaleX(...)`.
-6. Render MP4/WebM through Remotion.
 
 ## Shared Scene Schema
 
@@ -55,13 +56,14 @@ Use when Remotion and ffmpeg are available:
 ## Motion Timing
 
 - 0-25%: eyebrow and title enter
-- 20-85%: metric count-up and bar fill
+- 20-85%: metric count-up and bar fill only when those fields are meaningful
 - 85-100%: final hold
 - add 500-700ms hold between scenes when exporting GIF
 - Do not add a separate white sweep rectangle over the gauge; it reads as a second moving chart. Animate only the main filled bar unless the user explicitly asks for a shine effect.
+- Do not duplicate slides/pages to create animation. Motion is always inside the Remotion scene timeline.
 
 ## Fallback Policy
 
-- If ffmpeg is unavailable: produce GIF preview.
-- If Remotion is unavailable: produce responsive HTML or GIF preview.
+- If ffmpeg is unavailable: produce GIF preview only.
+- If Remotion is unavailable: produce responsive HTML or GIF preview only and state that final motion video is blocked.
 - If browser rendering is blocked: validate scene JSON and generated file metadata.

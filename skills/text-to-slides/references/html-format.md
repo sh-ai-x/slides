@@ -17,7 +17,7 @@ Animation classes:
 - `reveal`: fade and rise on entry.
 - `stagger`: sequential child reveal.
 - `bar-fill`: animate a horizontal metric bar.
-- `bar-sweep`: subtle highlight pass over a filled bar.
+- `bar-fill`: animate a meaningful numeric bar with one filled element. Do not add a separate sweep overlay unless the user explicitly asks.
 - `counter`: numeric emphasis for Remotion count-up conversion.
 - `counter-inline`: count-up inside table or paragraph text.
 - `row-reveal`: staggered table/list row reveal.

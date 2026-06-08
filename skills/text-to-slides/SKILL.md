@@ -1,6 +1,6 @@
 ---
 name: text-to-slides
-description: Turn text, scripts, outlines, Korean drafts, or article excerpts into responsive HTML-based slides or card-news frames that can be animated in Remotion. Use when Codex needs to summarize text into slide/card structure, output a self-contained web-responsive HTML file, add CSS/JS motion cues by default for charts and metrics, prepare 16:9 slides or 4:5 card-news layouts, create Remotion-friendly scene data, or produce web slides instead of a PPTX.
+description: Turn text, scripts, outlines, Korean drafts, or article excerpts into responsive HTML-based slides or card-news frames that can be animated in Remotion. Use when Codex needs to summarize text into slide/card structure, output a self-contained web-responsive HTML file, add CSS/JS motion cues only when charts or metrics are useful, prepare 16:9 slides or 4:5 card-news layouts, create Remotion-friendly scene data, or produce web slides instead of a PPTX.
 ---
 
 # Text to Slides
@@ -17,7 +17,7 @@ Create HTML slide or card-news outputs from text. Prefer this over PPTX when the
    - `card-news`: 1080x1350, vertical social carousel.
 3. Build one self-contained HTML file with inline CSS and minimal JS.
 4. Put scene data in `const slides = [...]` or HTML `data-*` attributes so it can be ported to Remotion.
-5. Add motion cues with CSS classes: `fade-up`, `count-up`, `bar-fill`, `bar-sweep`, `stagger`, `row-reveal`, `wipe`.
+5. Add motion cues with CSS classes only when they carry meaning: `fade-up`, `count-up`, `bar-fill`, `stagger`, `row-reveal`, `wipe`.
 6. Make the HTML responsive for web viewing while preserving Remotion dimensions in `data-remotion-width` and `data-remotion-height`.
 7. Verify the HTML renders without overflow at desktop and mobile viewports.
 
@@ -40,15 +40,22 @@ If the user also needs editable PPT or Google Slides upload, pair this with the 
 
 ## Default Chart Motion
 
-Read `references/chart-motion.md` whenever the output includes metrics, charts, KPI tables, bars, comparisons, or numeric claims. Default behavior:
+Read `references/chart-motion.md` only when the output includes metrics, charts, KPI tables, bars, comparisons, or numeric claims that should be visually emphasized. Do not invent chart bars or gauges for conceptual slides with no meaningful number. Default behavior:
 
 - Animate large metrics with count-up when the slide enters the viewport.
-- Animate bar charts with left-to-right fill and a subtle sweep highlight.
+- Animate bar charts with left-to-right fill only; do not add a separate sweep highlight unless the user asks.
 - Animate comparison panels from left/right when they appear as opposing options.
 - Animate summary table rows with a staggered reveal.
 - Include `prefers-reduced-motion: reduce` so motion can be disabled.
 - Keep the motion decorative; final values must remain readable without JavaScript.
 - Preserve data in attributes such as `data-count-to`, `data-suffix`, and CSS variables such as `--value` for Remotion mapping.
+
+## Token Optimization Rules
+
+- Build one compact story-spine JSON first and reuse it for HTML, PPTX, GIF, and video variants.
+- Keep slide text short; put full narration in `data-notes` or external JSON instead of duplicating it in visible HTML.
+- Use local scripts and references instead of pasting generated HTML, transcripts, or long scene arrays back into chat.
+- When exporting a visual proof image, save GIF by default. PNG is allowed only for internal render frames or when the user explicitly asks for a still image.
 
 ## Responsive HTML Requirements
 
@@ -81,8 +88,8 @@ For Remotion implementation, translate each `.slide` into a React component, rep
 - Slide/card count matches the source plan.
 - No visible text overflow at desktop and mobile viewport sizes.
 - No fixed 1920px deck/slide CSS remains unless the user explicitly asks for a fixed render-only frame.
-- Numeric claims are prominent.
-- Chart and metric motion cues are present by default when charts or numbers exist, but not essential for readability.
+- Numeric claims are prominent only when the source makes them important.
+- Chart and metric motion cues are present only when charts or numbers are useful to the message.
 - `prefers-reduced-motion` fallback exists.
 - Speaker notes or narration hints are preserved.
 - Browser verification was attempted; if blocked by sandbox or browser permissions, state that clearly.

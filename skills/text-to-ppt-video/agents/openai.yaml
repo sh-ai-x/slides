@@ -1,4 +1,4 @@
 interface:
   display_name: "Text to PPT Video"
   short_description: "Create timed MP4/WebM slide videos from text"
-  default_prompt: "Use $text-to-ppt-video to turn this script into a timed slide video with ffmpeg, Whisper, and Remotion or HyperFrames."
+  default_prompt: "Use $text-to-ppt-video to turn this script into a timed Remotion slide video with ffmpeg and Whisper."

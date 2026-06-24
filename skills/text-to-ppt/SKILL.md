@@ -1,119 +1,125 @@
 ---
 name: text-to-ppt
-description: Create editable PowerPoint decks from plain text, markdown, outlines, notes, pasted articles, Korean drafts, or speaker scripts. Use when Codex needs to turn text-only input into a structured PPTX with slide titles, bullets, speaker notes, source lines, consulting-style charts or card-like slides, and a professional 16:9 layout. Pair with text-to-slides when the user also needs responsive HTML, Remotion animation, video, or web slide output.
+description: Create editable PowerPoint decks OR interactive HTML slide decks from plain text, markdown, outlines, notes, pasted articles, Korean drafts, or speaker scripts. Supports PPTX (via pptxgenjs) and self-contained HTML with arrow-key navigation and Remotion-style spring transitions. Use when Codex needs to turn text-only input into a structured presentation with slide titles, bullets, speaker notes, source lines, consulting-style charts or card-like slides, and a professional 16:9 layout.
 ---
 
 # Text to PPT
 
 ## Overview
 
-Convert user-provided text into an editable PowerPoint deck. Use a disciplined sequence: clarify only what is necessary, turn the source into a slide plan, generate a PPTX, then verify the file and layout.
+Convert user-provided text into a presentation deck. Two output formats are supported from the **same deck JSON**:
 
-If the user asks for multiple formats, create one shared story spine first, then export the PPTX with this skill, responsive HTML with `text-to-slides`, motion-slide video previews with `text-to-slides-video`, and short animated metric GIFs with `text-to-gif`.
+| Format | Command | Use when |
+|--------|---------|----------|
+| **PPTX** | `build_pptx.cjs` | Editable file for PowerPoint / Keynote |
+| **HTML** | `build_html.cjs` | Browser presentation with arrow-key nav + Remotion spring transitions |
+
+Use a disciplined sequence: clarify only what is necessary → plan → normalize to deck JSON → build output → verify.
 
 ## Workflow
 
 ### 1. Ask Only Required Questions
 
-For a simple request like "이 텍스트로 PPT 만들어줘", proceed with defaults instead of stopping:
+For a simple request like "이 텍스트로 PPT 만들어줘", proceed with defaults:
 
 - audience: general business
 - slide count: 6-10 slides for ordinary text, 10-15 for long articles or lectures
-- format: 16:9 widescreen PPTX
-- style: clean consulting-style deck
+- format: PPTX unless the user says "HTML", "브라우저", "웹", "화살표 키", or "Remotion"
+- style: dark consulting-style deck
 - language: preserve the input language
 
-Ask before writing only when the answer materially changes the deck:
+Ask only when the answer materially changes the deck:
 
 - exact slide count
 - audience or purpose
-- required template or brand
-- whether to include source/footer
-- whether the user wants a chart-heavy deck, card-news deck, or lecture deck
+- required brand color / accent
+- PPTX vs HTML output
+- whether slides need custom layouts (metrics cards, bar charts, timelines)
 
 ### 2. Plan Before Building
 
-Create a short text plan first for non-trivial decks:
-
 ```text
 === PPT 기획안 ===
-장수: 8
-스타일: consulting
-출처 표기: Source: user-provided text
+장수: 6
+출력: HTML (화살표 키 + Remotion 스프링 트랜지션)
+스타일: dark consulting
 
-1. [Cover] Title
-2. [Key message] Main takeaway
-3. [Evidence] Supporting points
+1. [cover]  제목 커버
+2. [content] 핵심 역량 소개
+3. [content] Project 1 — ...
 ...
 === 기획안 끝 ===
 ```
 
-If the user has asked for immediate execution or the request is routine, create the plan internally and proceed.
-
-When pairing with `text-to-slides`, keep this plan as the source of truth for both outputs. Do not independently rewrite the slide order for PPTX and HTML unless the format requires a deliberate adaptation.
-
 ### 3. Normalize to Deck JSON
 
-Use `scripts/text_to_ppt_plan.py` to convert text or markdown into deck JSON:
+**Option A — Auto (text/markdown input):**
+```bash
+python3 scripts/text_to_ppt_plan.py input.md --output deck.json --title "Deck Title"
+```
+Then manually edit the JSON — the auto-converter produces one slide per heading, which is often too many.
+
+**Option B — Manual (recommended for custom layouts):**
+Write `deck.json` directly. For custom slide bodies (metrics cards, bar charts, timelines) use the `html` field on individual slides. See `references/deck-json.md` for schema.
+
+### 4a. Build PPTX
 
 ```bash
-python scripts/text_to_ppt_plan.py input.md --output deck.json --title "Deck Title"
+NODE_PATH=/Users/sanghee/.claude/skills/text-to-ppt/node_modules \
+  node scripts/build_pptx.cjs deck.json --output deck.pptx
 ```
 
-Then edit the JSON if needed. Prefer action titles that state the insight, not generic topic labels.
-
-### 4. Build the PPTX
-
-Use the Node script with `pptxgenjs`:
+### 4b. Build HTML (arrow-key nav + Remotion spring)
 
 ```bash
-NODE_PATH=/path/to/node_modules node scripts/build_pptx.cjs deck.json --output deck.pptx
+node scripts/build_html.cjs deck.json --output deck.html
 ```
 
-The script creates editable slides with:
+No extra dependencies — pure Node.js, zero npm installs required.
 
-- title slide
-- section labels
-- insight titles
-- bullet layouts
-- speaker notes
-- source/footer text
-- light or dark theme
+**HTML features:**
+- `←` `→` arrow keys (also `Space`, `↑`, `↓`, `Home`, `End`)
+- `N` key to toggle speaker notes overlay
+- Dot indicators + prev/next buttons
+- Touch swipe support
+- Remotion-style spring physics (`springValue()` with stiffness/damping/mass)
+- `requestAnimationFrame` 60 fps frame loop
+- Auto-scales to any viewport (1280×720 logical canvas)
+- Self-contained single `.html` file — no server needed
+
+**For custom slide layouts** write inline HTML in the `html` field of a slide and open the generated file in a browser. Iterate directly in the HTML — the deck JSON is the source of truth for standard slides.
 
 ### 5. Verify Quality
 
-Always verify:
+PPTX:
+- File exists and is non-empty
+- Slide count matches plan
+- No slide has more than 5 bullets (dense content → notes)
 
-- PPTX file exists and is non-empty
-- slide count matches the plan
-- no slide has more than 5 bullets unless intentionally dense
-- long paragraphs are moved to notes
-- titles and body text are readable
-- source/footer appears when specified
-
-If a rendering tool is available, render the PPTX and inspect for overflow, unreadable text, or excessive empty space. Revise and regenerate if any slide fails.
+HTML:
+- Open in browser, navigate with arrow keys
+- Check all slides render without overflow
+- Confirm spring animation is smooth (not instant, not sluggish)
+- Check notes appear/disappear with `N`
 
 ## Style Rules
 
-Default to a consulting/report style unless the user asks otherwise:
+Default to a dark consulting style:
 
-- Use grayscale with one accent color, default red `#c0392b`.
-- No emoji, decorative icons, gradients, shadows, or ornamental rounded cards.
-- Make slide titles pass the "So what?" test.
-- Quantify claims when numbers exist in the source.
-- Keep every slide focused on one message.
-- Include `Source:` at the bottom when source information is known.
-- Avoid empty lower-half slides; add explanatory text, a comparison, or split the structure.
+- Background: `#0d0d0d`, accent: `#c0392b` (red), text: `#f0f0f0`
+- No emoji, decorative icons, gradients, or shadows on standard slides
+- Slide titles pass the "So what?" test — state the insight, not the topic
+- Quantify claims when numbers exist in the source
+- One message per slide
+- Sub-bullets use indented `"  text"` in the bullets array
 
 For stricter guidance, read `references/consulting-style.md`.
 
 ## Resources
 
-- `scripts/text_to_ppt_plan.py`: Convert plain text or markdown into deck JSON.
-- `scripts/build_pptx.cjs`: Build an editable PPTX from deck JSON with `pptxgenjs`.
-- `scripts/check_text_to_ppt_toolchain.sh`: Check Node and PPTX generation dependencies.
-- `references/deck-json.md`: Deck JSON schema and examples.
+- `scripts/text_to_ppt_plan.py`: Auto-convert plain text/markdown to deck JSON.
+- `scripts/build_pptx.cjs`: Build editable PPTX from deck JSON (requires pptxgenjs).
+- `scripts/build_html.cjs`: Build self-contained HTML presentation from deck JSON (no deps).
+- `scripts/check_text_to_ppt_toolchain.sh`: Check toolchain (Node, pptxgenjs).
+- `references/deck-json.md`: Deck JSON schema — includes `layout` and `html` fields.
 - `references/consulting-style.md`: Consulting-style writing, layout, and validation rules.
-- Pair with `../text-to-slides` when the requested deliverable includes responsive HTML, card news, Remotion, animation, video, or web preview.
-- Pair with `../text-to-slides-video` when the requested deliverable includes a video-ready slide sequence, Remotion handoff, or motion preview.
-- Pair with `../text-to-gif` when the requested deliverable includes a short looping GIF, metric animation, or chart motion preview.

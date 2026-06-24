@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Data Analysis × Agent Engineering</title>
+<style>
+:root {
+  --bg: #09090f;
+  --surface: #12121a;
+  --surface2: #1a1a24;
+  --border: #252535;
+  --accent: #6366f1;
+  --accent2: #818cf8;
+  --accent3: #a5b4fc;
+  --red: #f43f5e;
+  --green: #10b981;
+  --yellow: #f59e0b;
+  --text: #f0f0f8;
+  --text2: #9090b8;
+  --text3: #505070;
+  --mono: 'SF Mono','JetBrains Mono','Fira Code',monospace;
+  --sans: -apple-system,BlinkMacSystemFont,'SF Pro Display','Helvetica Neue',sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hidden}
+
+/* ── Deck ── */
+#deck{position:relative;width:100%;height:100%}
+.slide{
+  position:absolute;inset:0;
+  display:flex;flex-direction:column;justify-content:center;align-items:center;
+  padding:60px 80px;
+  visibility:hidden;
+  will-change:transform,opacity,filter;
+}
+.slide.visible{visibility:visible}
+
+/* ── Progress ── */
+#bar{
+  position:fixed;top:0;left:0;height:3px;
+  background:linear-gradient(90deg,var(--accent),var(--accent2));
+  transition:width .4s cubic-bezier(.4,0,.2,1);
+  z-index:100;border-radius:0 2px 2px 0;
+}
+
+/* ── Nav ── */
+.nav{
+  position:fixed;top:50%;transform:translateY(-50%);
+  width:42px;height:42px;border-radius:50%;
+  background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.2);
+  color:var(--accent2);font-size:17px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  z-index:100;transition:background .2s,border-color .2s,opacity .3s;
+}
+.nav:hover{background:rgba(99,102,241,.25);border-color:var(--accent)}
+#btn-p{left:18px}#btn-n{right:18px}
+
+/* ── Dots ── */
+#dots{
+  position:fixed;bottom:26px;left:50%;transform:translateX(-50%);
+  display:flex;gap:7px;z-index:100;
+}
+.dot{
+  width:5px;height:5px;border-radius:50%;
+  background:var(--text3);cursor:pointer;
+  transition:background .2s,transform .2s;
+  border:none;padding:0;
+}
+.dot.on{background:var(--accent2);transform:scale(1.5)}
+
+/* ── Counter ── */
+#ctr{
+  position:fixed;bottom:26px;right:32px;
+  font-size:11px;color:var(--text3);font-family:var(--mono);letter-spacing:.08em;z-index:100;
+}
+
+/* ── Typography ── */
+.lbl{font-size:11px;font-family:var(--mono);letter-spacing:.18em;text-transform:uppercase;color:var(--accent);margin-bottom:18px}
+.t-xl{font-size:clamp(34px,5.5vw,70px);font-weight:700;line-height:1.07;letter-spacing:-.03em}
+.t-lg{font-size:clamp(26px,3.8vw,50px);font-weight:700;line-height:1.12;letter-spacing:-.025em}
+.t-md{font-size:clamp(20px,2.5vw,36px);font-weight:700;line-height:1.2;letter-spacing:-.02em}
+.sub{font-size:clamp(14px,1.5vw,20px);color:var(--text2);line-height:1.6;margin-top:14px}
+.body{font-size:clamp(13px,1.3vw,18px);color:var(--text2);line-height:1.65}
+.hr{width:44px;height:3px;background:linear-gradient(90deg,var(--accent),transparent);border-radius:2px;margin:22px 0}
+.ac{color:var(--accent2);font-weight:600}
+.ac2{color:var(--green);font-weight:600}
+.ac3{color:var(--yellow);font-weight:600}
+.ac4{color:var(--red);font-weight:600}
+
+/* ── Grid / Cards ── */
+.grid{display:grid;gap:16px;width:100%;max-width:1100px}
+.g2{grid-template-columns:1fr 1fr}
+.g3{grid-template-columns:1fr 1fr 1fr}
+.g4{grid-template-columns:1fr 1fr 1fr 1fr}
+.card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:14px;padding:24px 22px;
+}
+.card.a{border-color:rgba(99,102,241,.35)}
+.card.r{border-color:rgba(244,63,94,.3)}
+.card.g{border-color:rgba(16,185,129,.3)}
+.card.y{border-color:rgba(245,158,11,.3)}
+.ci{font-size:24px;display:block;margin-bottom:12px}
+.ct{font-size:14px;font-weight:700;color:var(--text);margin-bottom:7px;letter-spacing:-.01em}
+.cb{font-size:12px;color:var(--text2);line-height:1.6}
+
+/* ── Chips ── */
+.chip{display:inline-block;padding:5px 12px;border-radius:999px;font-size:11.5px;font-weight:600;letter-spacing:.04em;font-family:var(--mono)}
+.cp{background:rgba(99,102,241,.15);color:var(--accent3);border:1px solid rgba(99,102,241,.28)}
+.cr{background:rgba(244,63,94,.12);color:#fb7185;border:1px solid rgba(244,63,94,.28)}
+.cg{background:rgba(16,185,129,.12);color:#34d399;border:1px solid rgba(16,185,129,.28)}
+.cy{background:rgba(245,158,11,.12);color:#fbbf24;border:1px solid rgba(245,158,11,.28)}
+.tags{display:flex;gap:9px;flex-wrap:wrap;margin-top:22px}
+
+/* ── Stats ── */
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;width:100%;max-width:880px}
+.sbox{text-align:center;padding:30px 18px;background:var(--surface);border:1px solid var(--border);border-radius:16px}
+.snum{
+  font-size:clamp(34px,5vw,58px);font-weight:800;letter-spacing:-.04em;line-height:1;
+  background:linear-gradient(135deg,var(--accent2),var(--accent3));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+.slbl{font-size:12px;color:var(--text2);margin-top:10px;line-height:1.45}
+
+/* ── Code ── */
+.code{
+  background:var(--surface2);border:1px solid var(--border);border-radius:10px;
+  padding:18px 22px;font-family:var(--mono);font-size:12.5px;color:var(--text2);line-height:1.7;width:100%;
+}
+.kw{color:var(--accent2)}.str{color:#34d399}.cm{color:var(--text3)}.fn{color:#fbbf24}
+
+/* ── Pipeline ── */
+.pipe{display:flex;align-items:center;width:100%;max-width:960px}
+.pn{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px 14px;text-align:center}
+.pn.hl{background:rgba(99,102,241,.1);border-color:rgba(99,102,241,.38)}
+.pa{color:var(--text3);font-size:16px;padding:0 5px;flex-shrink:0}
+.pni{font-size:22px;display:block;margin-bottom:6px}
+.pnl{font-size:12px;font-weight:700;color:var(--text)}
+.pns{font-size:10px;color:var(--text3);margin-top:3px;font-family:var(--mono)}
+
+/* ── Two-col ── */
+.two{display:grid;grid-template-columns:1fr 1fr;gap:44px;width:100%;max-width:1100px;align-items:start}
+
+/* ── Bullets ── */
+.blist{list-style:none;display:flex;flex-direction:column;gap:13px;width:100%;max-width:760px}
+.blist li{display:flex;gap:12px;align-items:flex-start;font-size:clamp(13px,1.3vw,17px);color:var(--text2);line-height:1.55}
+.bul{color:var(--accent);font-weight:700;font-size:16px;flex-shrink:0;margin-top:1px}
+
+/* ── Cover orbs ── */
+.orb{position:absolute;border-radius:50%;filter:blur(80px);pointer-events:none;z-index:0}
+.orb1{width:600px;height:400px;background:rgba(99,102,241,.22);bottom:-100px;left:50%;transform:translateX(-50%);animation:float1 8s ease-in-out infinite}
+.orb2{width:320px;height:320px;background:rgba(244,63,94,.1);top:30px;right:80px;animation:float2 10s ease-in-out infinite}
+.orb3{width:260px;height:260px;background:rgba(16,185,129,.08);top:60px;left:60px;animation:float3 12s ease-in-out infinite}
+@keyframes float1{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(-30px)}}
+@keyframes float2{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-20px) scale(1.08)}}
+@keyframes float3{0%,100%{transform:translateY(0)}50%{transform:translateY(18px)}}
+
+/* ── Cover word spans ── */
+.word{display:inline-block}
+.word.ac-c{color:var(--accent2)}
+
+/* ── Source ── */
+.src{position:absolute;bottom:22px;left:50%;transform:translateX(-50%);font-size:10.5px;color:var(--text3);font-family:var(--mono);white-space:nowrap}
+
+/* ── Anim elements ── */
+.a{opacity:0}
+
+/* ── Section cover backgrounds ── */
+#s0{background:var(--bg)}
+#s9{background:radial-gradient(ellipse 80% 60% at 50% 110%,rgba(99,102,241,.2) 0%,transparent 70%),var(--bg);text-align:center}
+
+@media(max-width:768px){
+  .slide{padding:36px 24px}
+  .g3,.g4{grid-template-columns:1fr 1fr}
+  .two{grid-template-columns:1fr;gap:24px}
+  .stats{grid-template-columns:1fr}
+  .pipe{flex-direction:column}
+}
+</style>
+</head>
+<body>
+
+<div id="bar"></div>
+<button class="nav" id="btn-p">&#8592;</button>
+<button class="nav" id="btn-n">&#8594;</button>
+<div id="dots"></div>
+<div id="ctr"></div>
+
+<div id="deck">
+
+<!-- 0 · Cover -->
+<section class="slide" id="s0">
+  <div class="orb orb1"></div><div class="orb orb2"></div><div class="orb orb3"></div>
+  <div style="position:relative;z-index:1;text-align:center">
+    <div class="lbl a" data-d="0">2025 &nbsp;·&nbsp; Technical Deep Dive</div>
+    <h1 class="t-xl" style="margin-top:14px">
+      <span class="word a" data-d="80">Data</span>
+      <span class="word a" data-d="150"> Analysis</span>
+      <span class="word ac-c a" data-d="240"> ×</span><br>
+      <span class="word a" data-d="320">Agent</span>
+      <span class="word ac-c a" data-d="400"> Engineering</span>
+    </h1>
+    <p class="sub a" data-d="580" style="max-width:540px;margin:20px auto 0">
+      데이터 분석의 자동화를 넘어,<br>추론하고 행동하는 인텔리전트 파이프라인의 설계
+    </p>
+    <div class="tags a" data-d="740" style="justify-content:center;margin-top:30px">
+      <span class="chip cp">LLM Agents</span>
+      <span class="chip cg">Data Pipelines</span>
+      <span class="chip cr">Multi-Agent</span>
+      <span class="chip cy">ReAct / CoT</span>
+    </div>
+  </div>
+</section>
+
+<!-- 1 · Why Now -->
+<section class="slide" id="s1">
+  <div style="width:100%;max-width:1100px">
+    <div class="lbl a" data-d="0">Context</div>
+    <h2 class="t-lg a" data-d="80">지금 이 두 분야가 만나는 이유</h2>
+    <div class="hr a" data-d="160"></div>
+    <div class="stats a" data-d="240">
+      <div class="sbox">
+        <div class="snum" data-count="10" data-suffix="×">0</div>
+        <div class="slbl">LLM 추론 비용 감소<br>(2023 → 2025)</div>
+      </div>
+      <div class="sbox">
+        <div class="snum" data-count="80" data-suffix="%">0</div>
+        <div class="slbl">데이터 분석 시간이<br>전처리·탐색에 소요</div>
+      </div>
+      <div class="sbox">
+        <div class="snum" data-count="3" data-suffix="B+">0</div>
+        <div class="slbl">AI Agents 관련<br>2024 VC 투자 규모 ($)</div>
+      </div>
+    </div>
+    <p class="body a" data-d="420" style="max-width:840px;margin-top:26px">
+      LLM이 단순 텍스트 생성을 넘어 <span class="ac">도구를 호출</span>하고 <span class="ac">계획을 세우는</span> 능력을 갖추면서,
+      데이터 파이프라인의 반복 작업을 에이전트가 직접 수행하는 시대가 열리고 있다.
+    </p>
+  </div>
+  <div class="src">Source: McKinsey Global AI Survey 2024 · Scale AI Index 2025</div>
+</section>
+
+<!-- 2 · What is Agent Engineering -->
+<section class="slide" id="s2">
+  <div style="width:100%;max-width:1100px">
+    <div class="lbl a" data-d="0">Foundations</div>
+    <h2 class="t-lg a" data-d="80">Agent Engineering란 무엇인가</h2>
+    <div class="hr a" data-d="160"></div>
+    <div class="grid g3 a" data-d="240">
+      <div class="card a"><span class="ci">🧠</span><div class="ct">Reasoning</div><div class="cb">LLM이 목표를 분해하고 단계별 계획(Chain-of-Thought)을 생성. 복잡한 분석 문제를 하위 작업으로 쪼갠다.</div></div>
+      <div class="card a" data-d="320"><span class="ci">🔧</span><div class="ct">Tool Use</div><div class="cb">SQL 실행, Python 코드 실행, API 호출, 파일 I/O 등 외부 도구를 LLM이 직접 호출하고 결과를 해석.</div></div>
+      <div class="card a" data-d="400"><span class="ci">🔁</span><div class="ct">Feedback Loop</div><div class="cb">실행 결과를 관찰(Observe)하고 계획을 수정(Reflect)하는 ReAct 패턴으로 자기교정 루프 형성.</div></div>
+    </div>
+    <div class="code a" data-d="520" style="margin-top:18px">
+      <span class="cm"># ReAct 패턴의 핵심 사이클</span><br>
+      <span class="kw">while</span> <span class="fn">not_done</span>(goal):<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;thought = llm.<span class="fn">reason</span>(context)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cm"># Think</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;action = llm.<span class="fn">decide_tool</span>(thought)&nbsp;&nbsp;<span class="cm"># Act</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;obs&nbsp;&nbsp;&nbsp; = tools.<span class="fn">execute</span>(action)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cm"># Observe</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;context.<span class="fn">update</span>(obs)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cm"># Reflect</span>
+    </div>
+  </div>
+</section>
+
+<!-- 3 · Before / After -->
+<section class="slide" id="s3">
+  <div style="width:100%;max-width:1100px">
+    <div class="lbl a" data-d="0">Transformation</div>
+    <h2 class="t-lg a" data-d="80">에이전트가 바꾸는 데이터 분석</h2>
+    <div class="hr a" data-d="160"></div>
+    <div class="two a" data-d="240">
+      <div>
+        <p style="font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--text3);font-weight:700;margin-bottom:16px">Before · 전통적 분석</p>
+        <ul class="blist">
+          <li><span class="bul">—</span>분석가가 직접 SQL 작성 → 결과 해석 반복</li>
+          <li><span class="bul">—</span>각 단계마다 수동 검토 및 코드 수정</li>
+          <li><span class="bul">—</span>도메인 지식과 코딩 능력을 동시에 요구</li>
+          <li><span class="bul">—</span>재현 가능하지만 확장성에 한계</li>
+        </ul>
+      </div>
+      <div>
+        <p style="font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--accent);font-weight:700;margin-bottom:16px">After · Agent-Driven 분석</p>
+        <ul class="blist">
+          <li><span class="bul ac">→</span>자연어 질문 → 에이전트가 쿼리 생성·실행</li>
+          <li><span class="bul ac">→</span>이상값 감지 시 자동으로 가설 검증 루프</li>
+          <li><span class="bul ac">→</span>비개발자도 복잡한 분석 파이프라인 운용</li>
+          <li><span class="bul ac">→</span>동시 다수 에이전트로 병렬 분석 스케일링</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 4 · Architecture -->
+<section class="slide" id="s4">
+  <div style="width:100%;max-width:1100px">
+    <div class="lbl a" data-d="0">Architecture</div>
+    <h2 class="t-md a" data-d="80">Agentic Data Pipeline 아키텍처</h2>
+    <div class="hr a" data-d="160"></div>
+    <div class="pipe a" data-d="240">
+      <div class="pn"><span class="pni">📥</span><div class="pnl">Data Sources</div><div class="pns">DB · API · Files</div></div>
+      <div class="pa">→</div>
+      <div class="pn hl"><span class="pni">🤖</span><div class="pnl">Planner Agent</div><div class="pns">Goal Decompose</div></div>
+      <div class="pa">→</div>
+      <div class="pn hl"><span class="pni">⚙️</span><div class="pnl">Worker Agents</div><div class="pns">EDA · SQL · Code</div></div>
+      <div class="pa">→</div>
+      <div class="pn"><span class="pni">🔍</span><div class="pnl">Critic Agent</div><div class="pns">Validate · QA</div></div>
+      <div class="pa">→</div>
+      <div class="pn"><span class="pni">📊</span><div class="pnl">Output</div><div class="pns">Report · Action</div></div>
+    </div>
+    <div class="grid g3 a" data-d="380" style="margin-top:20px">
+      <div class="card"><div class="ct">Orchestration Layer</div><div class="cb">LangGraph · CrewAI · AutoGen으로 에이전트 간 메시지 라우팅 및 상태 관리</div></div>
+      <div class="card"><div class="ct">Memory & Context</div><div class="cb">Vector DB(Pinecone, Chroma)로 과거 분석 결과를 RAG로 검색해 일관성 유지</div></div>
+      <div class="card"><div class="ct">Tool Registry</div><div class="cb">Python Sandbox, SQL Engine, Chart Generator 등을 MCP 또는 OpenAPI로 등록</div></div>
+    </div>
+  </div>
+  <div class="src">Source: LangChain Blog · Anthropic MCP Spec 2024</div>
+</section>
+
+<!-- 5 · Capabilities -->
+<section class="slide" id="s5">
+  <div style="width:100%;max-width:1100px">
+    <div class="lbl a" data-d="0">Capabilities</div>
+    <h2 class="t-lg a" data-d="80">에이전트가 할 수 있는 것들</h2>
+    <div class="hr a" data-d="160"></div>
+    <div class="grid g4 a" data-d="240">
+      <div class="card"><span class="ci">🔎</span><div class="ct">Auto EDA</div><div class="cb">결측값, 분포, 상관관계를 자동 탐색하고 이상 패턴을 자연어로 리포팅</div></div>
+      <div class="card a" data-d="310"><span class="ci">💬</span><div class="ct">NL to SQL</div><div class="cb">비구조적 질문을 정확한 쿼리로 변환, 스키마 자동 추론 및 복잡 조인 처리</div></div>
+      <div class="card a" data-d="380"><span class="ci">🤖</span><div class="ct">Auto ML Loop</div><div class="cb">피처 선택 → 모델 훈련 → 평가 → 하이퍼파라미터 튜닝을 에이전트가 반복</div></div>
+      <div class="card a" data-d="450"><span class="ci">📡</span><div class="ct">Monitoring Agent</div><div class="cb">데이터 드리프트 감지 → 알람 발송 → 재학습 트리거까지 자율 운용</div></div>
+    </div>
+    <div class="grid g4 a" data-d="520" style="margin-top:14px">
+      <div class="card"><span class="ci">📝</span><div class="ct">Report Generation</div><div class="cb">분석 결과를 Executive Summary, 기술 보고서, 시각화로 자동 변환</div></div>
+      <div class="card a" data-d="590"><span class="ci">🧪</span><div class="ct">Hypothesis Testing</div><div class="cb">가설을 자동 수립하고 통계 검정을 수행한 후 결론을 설명</div></div>
+      <div class="card a" data-d="660"><span class="ci">🔗</span><div class="ct">Multi-Source Join</div><div class="cb">이종 데이터 소스(DB, API, CSV)를 에이전트가 자율적으로 연결·통합</div></div>
+      <div class="card a" data-d="730"><span class="ci">🛡️</span><div class="ct">Data Quality</div><div class="cb">스키마 검증, 중복 제거, 이상값 보정을 파이프라인 진입 전 자동 수행</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 6 · Tech Stack -->
+<section class="slide" id="s6">
+  <div style="width:100%;max-width:1100px">
+    <div class="lbl a" data-d="0">Tech Stack</div>
+    <h2 class="t-lg a" data-d="80">실전 기술 스택</h2>
+    <div class="hr a" data-d="160"></div>
+    <div class="two a" data-d="240">
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="card a">
+          <div class="cb" style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--text3);font-weight:700;margin-bottom:10px">LLM / Foundation</div>
+          <div class="tags" style="margin-top:0"><span class="chip cp">Claude 3.5+</span><span class="chip cp">GPT-4o</span><span class="chip cp">Gemini 1.5</span></div>
+        </div>
+        <div class="card a" data-d="320">
+          <div class="cb" style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--text3);font-weight:700;margin-bottom:10px">Orchestration</div>
+          <div class="tags" style="margin-top:0"><span class="chip cg">LangGraph</span><span class="chip cg">CrewAI</span><span class="chip cg">AutoGen</span></div>
+        </div>
+        <div class="card a" data-d="400">
+          <div class="cb" style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--text3);font-weight:700;margin-bottom:10px">Data Layer</div>
+          <div class="tags" style="margin-top:0"><span class="chip cy">dbt</span><span class="chip cy">Pandas AI</span><span class="chip cy">DuckDB</span></div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="card a" data-d="280">
+          <div class="cb" style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--text3);font-weight:700;margin-bottom:10px">Tool Protocol</div>
+          <div class="tags" style="margin-top:0"><span class="chip cr">MCP</span><span class="chip cr">OpenAPI</span><span class="chip cr">Function Calling</span></div>
+        </div>
+        <div class="card a" data-d="360">
+          <div class="cb" style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--text3);font-weight:700;margin-bottom:10px">Memory / RAG</div>
+          <div class="tags" style="margin-top:0"><span class="chip cp">Pinecone</span><span class="chip cp">Chroma</span><span class="chip cp">pgvector</span></div>
+        </div>
+        <div class="card a" data-d="440">
+          <div class="cb" style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--text3);font-weight:700;margin-bottom:10px">Observability</div>
+          <div class="tags" style="margin-top:0"><span class="chip cy">LangSmith</span><span class="chip cy">Arize</span><span class="chip cy">OpenTelemetry</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 7 · Use Cases -->
+<section class="slide" id="s7">
+  <div style="width:100%;max-width:1100px">
+    <div class="lbl a" data-d="0">Use Cases</div>
+    <h2 class="t-lg a" data-d="80">실제 적용 사례</h2>
+    <div class="hr a" data-d="160"></div>
+    <div class="grid g3 a" data-d="240">
+      <div class="card g">
+        <span class="ci">🛒</span>
+        <div class="ct">E-commerce · 수요 예측</div>
+        <div class="cb">재고 데이터 + 외부 트렌드 API를 에이전트가 실시간 결합, SKU별 수요 예측 모델을 자동 재학습·배포.<br><br><span class="chip cg" style="font-size:10.5px">재고 과잉 23% 감소</span></div>
+      </div>
+      <div class="card y a" data-d="330">
+        <span class="ci">🏦</span>
+        <div class="ct">Finance · 이상 거래 감지</div>
+        <div class="cb">Critic Agent가 Rule-based 탐지 결과를 LLM으로 2차 검토, 오탐률을 줄이고 설명 가능한 알림 생성.<br><br><span class="chip cy" style="font-size:10.5px">오탐 41% 감소</span></div>
+      </div>
+      <div class="card a a" data-d="420">
+        <span class="ci">🏥</span>
+        <div class="ct">Healthcare · 임상 분석</div>
+        <div class="cb">전자의무기록(EMR) 비정형 노트를 에이전트가 파싱·분류, 코호트 분석 리포트를 자동 생성.<br><br><span class="chip cp" style="font-size:10.5px">분석 시간 70% 단축</span></div>
+      </div>
+    </div>
+    <p class="body a" data-d="560" style="max-width:840px;margin-top:22px;text-align:center;margin-left:auto;margin-right:auto">
+      공통 패턴: <span class="ac">Planner → Worker → Critic</span> 삼중 구조로 품질과 속도를 동시에 확보
+    </p>
+  </div>
+</section>
+
+<!-- 8 · Challenges -->
+<section class="slide" id="s8">
+  <div style="width:100%;max-width:1100px">
+    <div class="lbl a" data-d="0">Challenges</div>
+    <h2 class="t-lg a" data-d="80">해결해야 할 과제들</h2>
+    <div class="hr a" data-d="160"></div>
+    <div class="grid g2 a" data-d="240">
+      <div class="card r"><div class="ct"><span class="ac4">01</span> &nbsp;Hallucination in Analysis</div><div class="cb">LLM이 존재하지 않는 통계값이나 잘못된 인과관계를 확신 있게 제시. Critic Agent + 그라운드 트루스 검증 레이어 필수.</div></div>
+      <div class="card r a" data-d="320"><div class="ct"><span class="ac4">02</span> &nbsp;Cost & Latency</div><div class="cb">복잡한 분석에서 에이전트 루프가 수십 회 반복되며 토큰 비용 폭증. Caching · 경량 모델 라우팅 · 루프 상한(max_iter) 설계 필요.</div></div>
+      <div class="card r a" data-d="400"><div class="ct"><span class="ac4">03</span> &nbsp;Data Privacy & Governance</div><div class="cb">PII 데이터가 LLM 컨텍스트에 노출될 위험. 데이터 마스킹, 온프레미스 LLM, 감사 로그 설계가 선행되어야 한다.</div></div>
+      <div class="card r a" data-d="480"><div class="ct"><span class="ac4">04</span> &nbsp;Observability</div><div class="cb">에이전트 내부 추론 과정이 블랙박스화되어 디버깅이 어렵다. Trace ID 기반 LLM Observability(LangSmith, Arize) 도입이 필수.</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 9 · Closing -->
+<section class="slide" id="s9">
+  <div style="position:relative;z-index:1;max-width:820px">
+    <div class="lbl a" data-d="0" style="justify-content:center;display:flex">Takeaway</div>
+    <h2 class="t-xl a" data-d="100" style="margin-top:12px;text-align:center;line-height:1.12">
+      분석가의 역할은<br>
+      <span class="ac">데이터를 다루는 것</span>에서<br>
+      에이전트를 <span class="ac">설계하는 것</span>으로
+    </h2>
+    <div class="hr a" data-d="300" style="margin:26px auto"></div>
+    <p class="sub a" data-d="400" style="text-align:center">
+      코드를 짜는 능력보다 <strong style="color:var(--text)">좋은 질문</strong>을 만드는 능력,<br>
+      파이프라인을 구축하는 것보다 <strong style="color:var(--text)">에이전트에게 목표를 부여</strong>하는 능력이 핵심 역량이 된다.
+    </p>
+    <div class="tags a" data-d="580" style="justify-content:center;margin-top:32px">
+      <span class="chip cp">Prompt Engineering</span>
+      <span class="chip cg">Agent Design Patterns</span>
+      <span class="chip cr">Evals & Observability</span>
+      <span class="chip cy">Data Governance</span>
+    </div>
+  </div>
+</section>
+
+</div><!-- #deck -->
+
+<script>
+// ── Easing ──────────────────────────────────────────────────────────────────
+const E_OUT  = 'cubic-bezier(0.22,1,0.36,1)';       // easeOutExpo-spring
+const E_SPR  = 'cubic-bezier(0.34,1.56,0.64,1)';    // spring with overshoot
+
+// ── State ────────────────────────────────────────────────────────────────────
+const slides = [...document.querySelectorAll('.slide')];
+const N = slides.length;
+let cur = 0, busy = false;
+
+// ── UI references ─────────────────────────────────────────────────────────────
+const bar   = document.getElementById('bar');
+const ctr   = document.getElementById('ctr');
+const dots  = document.getElementById('dots');
+const btnP  = document.getElementById('btn-p');
+const btnN  = document.getElementById('btn-n');
+
+// Build dots
+slides.forEach((_, i) => {
+  const d = document.createElement('button');
+  d.className = 'dot' + (i === 0 ? ' on' : '');
+  d.addEventListener('click', () => go(i));
+  dots.appendChild(d);
+});
+
+function updateUI() {
+  bar.style.width = `${(cur + 1) / N * 100}%`;
+  ctr.textContent = `${String(cur+1).padStart(2,'0')} / ${String(N).padStart(2,'0')}`;
+  dots.querySelectorAll('.dot').forEach((d, i) => d.classList.toggle('on', i === cur));
+  btnP.style.opacity = cur === 0     ? '.18' : '';
+  btnN.style.opacity = cur === N - 1 ? '.18' : '';
+}
+
+// ── Transition ───────────────────────────────────────────────────────────────
+function go(idx) {
+  if (idx < 0 || idx >= N || idx === cur || busy) return;
+  busy = true;
+
+  const fwd = idx > cur;
+  const out = slides[cur];
+  const inn = slides[idx];
+  const DUR = 580;
+
+  // Bring incoming slide into view (behind outgoing)
+  inn.classList.add('visible');
+
+  // ── Exit (current slide) ──
+  out.animate([
+    { opacity: 1, transform: 'scale(1) translateX(0)',            filter: 'blur(0px)'  },
+    { opacity: 0, transform: `scale(0.93) translateX(${fwd ? -55 : 55}px)`, filter: 'blur(7px)' }
+  ], { duration: DUR, easing: E_OUT, fill: 'forwards' });
+
+  // ── Enter (next slide) ──
+  const inAnim = inn.animate([
+    { opacity: 0, transform: `scale(0.93) translateX(${fwd ? 75 : -75}px)`, filter: 'blur(7px)' },
+    { opacity: 1, transform: 'scale(1) translateX(0)',            filter: 'blur(0px)'  }
+  ], { duration: DUR, easing: E_OUT, fill: 'forwards' });
+
+  inAnim.onfinish = () => {
+    // Commit state
+    out.classList.remove('visible');
+    out.getAnimations().forEach(a => a.cancel());
+
+    inAnim.cancel();
+    inn.style.visibility = ''; // let .visible rule handle it
+    cur = idx;
+    busy = false;
+    updateUI();
+    enterSlide(inn);
+  };
+}
+
+// ── Per-element entrance ─────────────────────────────────────────────────────
+function enterSlide(slide) {
+  const els = [...slide.querySelectorAll('.a')];
+  els.forEach(el => {
+    const delay = parseInt(el.dataset.d ?? 0);
+    el.animate(
+      [
+        { opacity: 0, transform: 'translateY(22px) scale(0.97)', filter: 'blur(4px)' },
+        { opacity: 1, transform: 'translateY(0)    scale(1)',    filter: 'blur(0px)' }
+      ],
+      { duration: 500, delay, easing: E_OUT, fill: 'both' }
+    );
+  });
+}
+
+// ── Count-up for stats ───────────────────────────────────────────────────────
+function countUp(el, target, suffix, dur = 1100) {
+  const start = performance.now();
+  (function tick(now) {
+    const p = Math.min((now - start) / dur, 1);
+    const ease = 1 - Math.pow(1 - p, 3);          // easeOutCubic
+    el.textContent = Math.round(ease * target) + (p >= 1 ? suffix : '');
+    if (p < 1) requestAnimationFrame(tick);
+  })(start);
+}
+
+function triggerCounters(slide) {
+  slide.querySelectorAll('[data-count]').forEach(el => {
+    countUp(el, +el.dataset.count, el.dataset.suffix || '', 1100);
+  });
+}
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+slides[0].classList.add('visible');
+updateUI();
+requestAnimationFrame(() => {
+  enterSlide(slides[0]);
+  triggerCounters(slides[0]);
+});
+
+// Wrap enterSlide to also trigger counters
+const _go = go;
+function goFull(idx) {
+  const prev = cur;
+  _go(idx);
+  // Counters run after transition finishes; handled inside go → enterSlide chain
+  const origFinish = slides[idx]?.getAnimations?.() ?? [];
+  // Simpler: check after DUR
+  setTimeout(() => triggerCounters(slides[idx]), 600);
+}
+
+// ── Keyboard ─────────────────────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  const map = { ArrowRight: 1, ' ': 1, PageDown: 1, ArrowLeft: -1, PageUp: -1 };
+  if (map[e.key] !== undefined) { e.preventDefault(); goFull(cur + map[e.key]); }
+  if (e.key === 'Home') goFull(0);
+  if (e.key === 'End')  goFull(N - 1);
+});
+
+btnN.addEventListener('click', () => goFull(cur + 1));
+btnP.addEventListener('click', () => goFull(cur - 1));
+dots.querySelectorAll('.dot').forEach((d, i) => d.addEventListener('click', () => goFull(i)));
+
+// ── Touch / swipe ─────────────────────────────────────────────────────────────
+let tx = 0;
+document.addEventListener('touchstart', e => tx = e.touches[0].clientX, { passive: true });
+document.addEventListener('touchend',   e => {
+  const dx = e.changedTouches[0].clientX - tx;
+  if (Math.abs(dx) > 48) goFull(cur + (dx < 0 ? 1 : -1));
+}, { passive: true });
+</script>
+</body>
+</html>
